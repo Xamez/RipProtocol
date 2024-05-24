@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"gopkg.in/yaml.v2"
 	"net"
 )
 
@@ -20,13 +21,20 @@ func UdpServer(host string, port int) {
 			continue
 		}
 
-		packet, err := UnmarshalRipPacket(buf[:n])
+		//data, err := UnmarshalRipPacket(buf[:n])
+		//if err != nil {
+		//	fmt.Println("Error unmarshalling RipPacket:", err)
+		//	continue
+		//}
+
+		var routerConfigEntry []map[string]RouterConfigEntry
+
+		err = yaml.Unmarshal(buf[:n], &routerConfigEntry)
 		if err != nil {
-			fmt.Println("Error unmarshalling RipPacket:", err)
-			continue
+			fmt.Println(err)
 		}
 
-		fmt.Println("Received from client: \n", packet)
+		fmt.Println("Received from client: \n", routerConfigEntry)
 		connection.WriteToUDP([]byte("Hello from server\n"), addr)
 	}
 

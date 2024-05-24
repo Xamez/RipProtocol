@@ -6,7 +6,7 @@ import (
 	"net"
 )
 
-func UdpClient(host string, port int, dataToSend RipPacket) {
+func UdpClient(host string, port int, dataToSend []byte) {
 	udpAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", host, port))
 	CheckForError(err)
 
@@ -14,8 +14,7 @@ func UdpClient(host string, port int, dataToSend RipPacket) {
 	CheckForError(err)
 
 	// Send message to server
-	serializedPacket, err := MarshalRipPacket(dataToSend)
-	_, err = connection.Write(serializedPacket)
+	_, err = connection.Write(dataToSend)
 	CheckForError(err)
 
 	// Receive message from server

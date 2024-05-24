@@ -12,6 +12,10 @@ type RouterConfigEntry struct {
 	Mask   string `yaml:"mask"`
 }
 
+func (entry RouterConfigEntry) String() string {
+	return fmt.Sprintf("Device: %s\nIp: %s\nMask: %s\n", entry.Device, entry.Ip, entry.Mask)
+}
+
 type RouterEntry struct {
 	AddressFamilyIdentifier uint16
 	RouteTag                uint16
@@ -22,17 +26,17 @@ type RouterEntry struct {
 }
 
 type RipPacket struct {
-	Command     byte
-	Version     byte
-	Unused      [2]byte
-	RouterEntry []RouterEntry
+	Command       byte
+	Version       byte
+	Unused        [2]byte
+	RouterEntries []RouterEntry
 }
 
 func (packet RipPacket) String() string {
 	str := fmt.Sprintf("Command: %d\n", packet.Command)
 	str += fmt.Sprintf("Version: %d\n", packet.Version)
 	str += fmt.Sprintf("Unused: %d\n", binary.BigEndian.Uint16(packet.Unused[:]))
-	for _, entry := range packet.RouterEntry {
+	for _, entry := range packet.RouterEntries {
 		str += fmt.Sprintf("AddressFamilyIdentifier: %d\n", entry.AddressFamilyIdentifier)
 		str += fmt.Sprintf("RouteTag: %d\n", entry.RouteTag)
 		str += fmt.Sprintf("IpAddress: %d.%d.%d.%d\n", entry.IpAddress[0], entry.IpAddress[1], entry.IpAddress[2], entry.IpAddress[3])
@@ -57,7 +61,7 @@ func MarshalRipPacket(packet RipPacket) ([]byte, error) {
 		return nil, err
 	}
 
-	for _, entry := range packet.RouterEntry {
+	for _, entry := range packet.RouterEntries {
 		if err := binary.Write(buf, binary.BigEndian, entry); err != nil {
 			return nil, err
 		}
@@ -86,7 +90,7 @@ func UnmarshalRipPacket(data []byte) (RipPacket, error) {
 		if err := binary.Read(buf, binary.BigEndian, &entry); err != nil {
 			return packet, err
 		}
-		packet.RouterEntry = append(packet.RouterEntry, entry)
+		packet.RouterEntries = append(packet.RouterEntries, entry)
 	}
 
 	return packet, nil

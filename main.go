@@ -7,23 +7,14 @@ import (
 
 func main() {
 	go UdpServer("localhost", 521)
-	ripPacket := RipPacket{
-		Command: 2,
-		Version: 2,
-		Unused:  [2]byte{0, 0},
-		RouterEntry: []RouterEntry{
-			{
-				AddressFamilyIdentifier: 2,
-				RouteTag:                0,
-				IpAddress:               [4]byte{192, 168, 1, 1},
-				SubMask:                 [4]byte{255, 255, 255, 0},
-				NextHop:                 [4]byte{0, 0, 0, 0},
-				Metric:                  1,
-			},
-		},
+	//routerEntries := ReadConfig()
+	//ripPacket := RipPacket{Command: 1, Version: 2, Unused: [2]byte{0, 0}, RouterEntries: routerEntries}
+	routerConfigEntry, err := ReadConfigAsBytes("config/routeur-r1.yaml")
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
-	UdpClient("localhost", 521, ripPacket)
-	ReadConfig()
+	UdpClient("localhost", 521, routerConfigEntry)
 }
 
 func CheckForError(err error) {

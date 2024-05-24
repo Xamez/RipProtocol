@@ -4,35 +4,51 @@ import (
 	"fmt"
 	"gopkg.in/yaml.v2"
 	"io"
-	"log"
 	"os"
 )
 
-func ReadConfig() {
-	file, err := os.Open("config/routeur-r1.yaml")
+func ReadConfigAsBytes(configFile string) ([]byte, error) {
+	file, err := os.Open(configFile)
 	if err != nil {
-		log.Fatalf("error: %v", err)
+		fmt.Println(err)
 	}
 	defer file.Close()
-	data, err := io.ReadAll(file)
+	return io.ReadAll(file)
+
+}
+
+func ReadConfig(configFile string) []map[string]RouterConfigEntry {
+	data, err := ReadConfigAsBytes(configFile)
 	if err != nil {
-		log.Fatalf("error: %v", err)
+		fmt.Println(err)
 	}
 
-	var interfaces []map[string]RouterConfigEntry
+	var routerConfigEntry []map[string]RouterConfigEntry
 
-	// Unmarshal the YAML
-	err = yaml.Unmarshal(data, &interfaces)
+	err = yaml.Unmarshal(data, &routerConfigEntry)
 	if err != nil {
-		log.Fatalf("error: %v", err)
+		fmt.Println(err)
 	}
 
-	// Iterate over the interfaces and print them
-	for _, iface := range interfaces {
-		for _, intf := range iface {
-			fmt.Printf("Device: %s, IP: %s, Mask: %s\n", intf.Device, stringToBytes(intf.Ip), stringToBytes(intf.Mask))
-		}
-	}
+	return routerConfigEntry
+
+	//var routerEntry []RouterEntry
+	//
+	//for _, entry := range routerConfigEntry {
+	//	for _, value := range entry {
+	//		routerEntry = append(routerEntry, RouterEntry{
+	//			AddressFamilyIdentifier: 1, // IPv4
+	//			RouteTag:                0, // Ignored
+	//			IpAddress:               stringToBytes(value.Ip),
+	//			SubMask:                 stringToBytes(value.Mask),
+	//			NextHop:                 [4]byte{0, 0, 0, 0},
+	//			Metric:                  1,
+	//		})
+	//	}
+	//
+	//}
+	//
+	//return routerEntry
 }
 
 func stringToBytes(s string) [4]byte {
