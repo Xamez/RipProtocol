@@ -1,20 +1,10 @@
-package main
+package rip
 
 import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
 )
-
-type RouterConfigEntry struct {
-	Device string `yaml:"device"`
-	Ip     string `yaml:"ip"`
-	Mask   string `yaml:"mask"`
-}
-
-func (entry RouterConfigEntry) String() string {
-	return fmt.Sprintf("Device: %s\nIp: %s\nMask: %s\n", entry.Device, entry.Ip, entry.Mask)
-}
 
 type RouterEntry struct {
 	AddressFamilyIdentifier uint16
@@ -25,26 +15,44 @@ type RouterEntry struct {
 	Metric                  uint32
 }
 
+func (entry RouterEntry) String() string {
+	network := applyMask(entry.IpAddress, entry.SubMask)
+	return fmt.Sprintf("%-15s %-15s %-15s %-15s %-5d",
+		fmt.Sprintf("%d.%d.%d.%d", network[0], network[1], network[2], network[3]),
+		fmt.Sprintf("%d.%d.%d.%d", entry.SubMask[0], entry.SubMask[1], entry.SubMask[2], entry.SubMask[3]),
+		fmt.Sprintf("%d.%d.%d.%d", entry.NextHop[0], entry.NextHop[1], entry.NextHop[2], entry.NextHop[3]),
+		fmt.Sprintf("%d.%d.%d.%d", entry.IpAddress[0], entry.IpAddress[1], entry.IpAddress[2], entry.IpAddress[3]),
+		entry.Metric)
+}
+
 type RipPacket struct {
-	Command       byte
-	Version       byte
-	Unused        [2]byte
-	RouterEntries []RouterEntry
+	Command      byte
+	Version      byte
+	Unused       [2]byte
+	RoutingTable []RouterEntry
 }
 
 func (packet RipPacket) String() string {
 	str := fmt.Sprintf("Command: %d\n", packet.Command)
 	str += fmt.Sprintf("Version: %d\n", packet.Version)
 	str += fmt.Sprintf("Unused: %d\n", binary.BigEndian.Uint16(packet.Unused[:]))
-	for _, entry := range packet.RouterEntries {
-		str += fmt.Sprintf("AddressFamilyIdentifier: %d\n", entry.AddressFamilyIdentifier)
-		str += fmt.Sprintf("RouteTag: %d\n", entry.RouteTag)
-		str += fmt.Sprintf("IpAddress: %d.%d.%d.%d\n", entry.IpAddress[0], entry.IpAddress[1], entry.IpAddress[2], entry.IpAddress[3])
-		str += fmt.Sprintf("SubMask: %d.%d.%d.%d\n", entry.SubMask[0], entry.SubMask[1], entry.SubMask[2], entry.SubMask[3])
-		str += fmt.Sprintf("NextHop: %d.%d.%d.%d\n", entry.NextHop[0], entry.NextHop[1], entry.NextHop[2], entry.NextHop[3])
-		str += fmt.Sprintf("Metric: %d\n", entry.Metric)
+	str += "Ip Address      Mask            Next Hop        Interface       Metric\n"
+	for _, entry := range packet.RoutingTable {
+		str += fmt.Sprintf("%s\n", entry.String())
 	}
 	return str
+}
+
+func CreateRipPacket(configFile string) RipPacket {
+	var s []RouterEntry
+	if configFile != "" {
+		s = ReadConfig(configFile)
+	}
+	return RipPacket{Command: 1, Version: 2, Unused: [2]byte{0, 0}, RoutingTable: s}
+}
+
+func CreateRipPacketFromRoutingTable(routingTable []RouterEntry) RipPacket {
+	return RipPacket{Command: 1, Version: 2, Unused: [2]byte{0, 0}, RoutingTable: routingTable}
 }
 
 func MarshalRipPacket(packet RipPacket) ([]byte, error) {
@@ -61,7 +69,7 @@ func MarshalRipPacket(packet RipPacket) ([]byte, error) {
 		return nil, err
 	}
 
-	for _, entry := range packet.RouterEntries {
+	for _, entry := range packet.RoutingTable {
 		if err := binary.Write(buf, binary.BigEndian, entry); err != nil {
 			return nil, err
 		}
@@ -90,7 +98,7 @@ func UnmarshalRipPacket(data []byte) (RipPacket, error) {
 		if err := binary.Read(buf, binary.BigEndian, &entry); err != nil {
 			return packet, err
 		}
-		packet.RouterEntries = append(packet.RouterEntries, entry)
+		packet.RoutingTable = append(packet.RoutingTable, entry)
 	}
 
 	return packet, nil
