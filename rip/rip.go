@@ -7,21 +7,19 @@ import (
 )
 
 type RouterEntry struct {
-	AddressFamilyIdentifier uint16
-	RouteTag                uint16
-	IpAddress               [4]byte
-	SubMask                 [4]byte
-	NextHop                 [4]byte
-	Metric                  uint32
+	IpAddress [4]byte
+	SubMask   [4]byte
+	NextHop   [4]byte
+	Interface [4]byte
+	Metric    uint32
 }
 
 func (entry RouterEntry) String() string {
-	network := applyMask(entry.IpAddress, entry.SubMask)
 	return fmt.Sprintf("%-15s %-15s %-15s %-15s %-5d",
-		fmt.Sprintf("%d.%d.%d.%d", network[0], network[1], network[2], network[3]),
+		fmt.Sprintf("%d.%d.%d.%d", entry.IpAddress[0], entry.IpAddress[1], entry.IpAddress[2], entry.IpAddress[3]),
 		fmt.Sprintf("%d.%d.%d.%d", entry.SubMask[0], entry.SubMask[1], entry.SubMask[2], entry.SubMask[3]),
 		fmt.Sprintf("%d.%d.%d.%d", entry.NextHop[0], entry.NextHop[1], entry.NextHop[2], entry.NextHop[3]),
-		fmt.Sprintf("%d.%d.%d.%d", entry.IpAddress[0], entry.IpAddress[1], entry.IpAddress[2], entry.IpAddress[3]),
+		fmt.Sprintf("%d.%d.%d.%d", entry.Interface[0], entry.Interface[1], entry.Interface[2], entry.Interface[3]),
 		entry.Metric)
 }
 

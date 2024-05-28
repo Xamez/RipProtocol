@@ -46,12 +46,11 @@ func ReadConfig(configFile string) []RouterEntry {
 	for _, entry := range routerConfigEntry {
 		for _, value := range entry {
 			routerEntry = append(routerEntry, RouterEntry{
-				AddressFamilyIdentifier: 2, // IPv4
-				RouteTag:                0, // Ignored
-				IpAddress:               stringToBytes(value.Ip),
-				SubMask:                 maskToBytes(value.Mask),
-				NextHop:                 [4]byte{0, 0, 0, 0},
-				Metric:                  1,
+				IpAddress: applyMask(stringToBytes(value.Ip), maskToBytes(value.Mask)),
+				SubMask:   maskToBytes(value.Mask),
+				NextHop:   [4]byte{0, 0, 0, 0},
+				Interface: stringToBytes(value.Ip),
+				Metric:    1,
 			})
 		}
 
