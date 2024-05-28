@@ -7,18 +7,23 @@ import (
 )
 
 type RouterEntry struct {
-	IpAddress [4]byte
-	SubMask   [4]byte
-	NextHop   [4]byte
-	Interface [4]byte
-	Metric    uint32
+	IpAddress  [4]byte
+	SubMask    [4]byte
+	NextHop    [4]byte
+	Interface  [4]byte
+	Metric     uint32
+	HasNextHop bool
 }
 
 func (entry RouterEntry) String() string {
+	nextHop := "nil"
+	if entry.HasNextHop {
+		nextHop = fmt.Sprintf("%d.%d.%d.%d", entry.NextHop[0], entry.NextHop[1], entry.NextHop[2], entry.NextHop[3])
+	}
 	return fmt.Sprintf("%-15s %-15s %-15s %-15s %-5d",
 		fmt.Sprintf("%d.%d.%d.%d", entry.IpAddress[0], entry.IpAddress[1], entry.IpAddress[2], entry.IpAddress[3]),
 		fmt.Sprintf("%d.%d.%d.%d", entry.SubMask[0], entry.SubMask[1], entry.SubMask[2], entry.SubMask[3]),
-		fmt.Sprintf("%d.%d.%d.%d", entry.NextHop[0], entry.NextHop[1], entry.NextHop[2], entry.NextHop[3]),
+		nextHop,
 		fmt.Sprintf("%d.%d.%d.%d", entry.Interface[0], entry.Interface[1], entry.Interface[2], entry.Interface[3]),
 		entry.Metric)
 }
