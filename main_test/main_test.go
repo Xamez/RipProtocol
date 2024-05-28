@@ -6,7 +6,7 @@ import (
 )
 
 func TestServer(t *testing.T) {
-	go rip.UdpServer("localhost", 521)
+	go rip.UdpServer("localhost", 521, []rip.RouterEntry{})
 	ripPacket := rip.CreateRipPacket("")
 	dataToSend, err := rip.MarshalRipPacket(ripPacket)
 	if err != nil {
@@ -32,13 +32,11 @@ func TestMarshallUnMarshall(t *testing.T) {
 }
 
 func TestSendR2ToR1(t *testing.T) {
-	go rip.UdpServer("localhost", 521)
-	ripPacket1 := rip.CreateRipPacket("../config/routeur-r1.yaml")
-	dataToSend1, err := rip.MarshalRipPacket(ripPacket1)
-	ripPacket2 := rip.CreateRipPacket("../config/routeur-r2.yaml")
-	dataToSend2, err := rip.MarshalRipPacket(ripPacket2)
+	go rip.UdpServer("localhost", 521, rip.ReadConfig("../config/routeur-r1.yaml"))
+	ripPacket := rip.CreateRipPacket("../config/routeur-r2.yaml")
+	dataToSend, err := rip.MarshalRipPacket(ripPacket)
 	if err != nil {
 		t.Error(err)
 	}
-	rip.UdpClient("localhost", 521, dataToSend1, dataToSend2)
+	rip.UdpClient("localhost", 521, dataToSend)
 }
