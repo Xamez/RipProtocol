@@ -43,6 +43,10 @@ func UdpServer(host string, port int, defaultRouterConfig []RouterEntry) {
 func MergeRoutingTable(routingTable []RouterEntry, newRoutingTable []RouterEntry) []RouterEntry {
 	var addressInterface [4]byte
 	var nextHop [4]byte
+	existingRoutes := make(map[[8]byte]int)
+	for i, existingRoute := range routingTable {
+		existingRoutes[[8]byte(append(existingRoute.IpAddress[:], existingRoute.SubMask[:]...))] = i
+	}
 	for _, newRoute := range newRoutingTable {
 		for i, existingRoute := range routingTable {
 			if areAddressesEqual(existingRoute.IpAddress, existingRoute.SubMask, newRoute.IpAddress, newRoute.SubMask) {
@@ -60,6 +64,9 @@ func MergeRoutingTable(routingTable []RouterEntry, newRoutingTable []RouterEntry
 		newRoute.Interface = addressInterface
 		newRoute.Metric++
 		newRoute.HasNextHop = true
+		if _, ok := existingRoutes[[8]byte(append(newRoute.IpAddress[:], newRoute.SubMask[:]...))]; ok {
+			continue
+		}
 		routingTable = append(routingTable, newRoute)
 	}
 	return routingTable

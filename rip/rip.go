@@ -28,6 +28,13 @@ func (entry RouterEntry) String() string {
 		entry.Metric)
 }
 
+func PrintRoutingTable(routingTable []RouterEntry) {
+	fmt.Println("Ip Address      Mask            Next Hop        Interface       Metric")
+	for _, entry := range routingTable {
+		fmt.Println(entry.String())
+	}
+}
+
 type RipPacket struct {
 	Command      byte
 	Version      byte

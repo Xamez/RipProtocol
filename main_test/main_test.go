@@ -40,3 +40,19 @@ func TestSendR2ToR1(t *testing.T) {
 	}
 	rip.UdpClient("localhost", 521, dataToSend)
 }
+
+func TestMergeEverything(t *testing.T) {
+	router1 := rip.ReadConfig("../config/routeur-r1.yaml")
+	router2 := rip.ReadConfig("../config/routeur-r2.yaml")
+	//router3 := rip.ReadConfig("../config/routeur-r3.yaml")
+	router4 := rip.ReadConfig("../config/routeur-r4.yaml")
+	router5 := rip.ReadConfig("../config/routeur-r5.yaml")
+	router6 := rip.ReadConfig("../config/routeur-r6.yaml")
+	router5 = rip.MergeRoutingTable(router5, router6)
+	router4 = rip.MergeRoutingTable(router4, router5)
+	router2 = rip.MergeRoutingTable(router2, router4)
+	router2 = rip.MergeRoutingTable(router2, router5)
+	router1 = rip.MergeRoutingTable(router1, router2)
+	rip.PrintRoutingTable(router1)
+	rip.PrintRoutingTable(router2)
+}
