@@ -7,29 +7,37 @@ import (
 )
 
 type RouterEntry struct {
-	IpAddress  [4]byte
-	SubMask    [4]byte
-	NextHop    [4]byte
-	Interface  [4]byte
+	IpAddress  string
+	SubMask    string
+	NextHop    string
+	Interface  string
 	Metric     uint32
 	HasNextHop bool
 }
 
 func (entry RouterEntry) String() string {
-	nextHop := "nil"
+	nextHop := ""
 	if entry.HasNextHop {
-		nextHop = fmt.Sprintf("%d.%d.%d.%d", entry.NextHop[0], entry.NextHop[1], entry.NextHop[2], entry.NextHop[3])
+		nextHop = entry.NextHop
 	}
 	return fmt.Sprintf("%-15s %-15s %-15s %-15s %-5d",
-		fmt.Sprintf("%d.%d.%d.%d", entry.IpAddress[0], entry.IpAddress[1], entry.IpAddress[2], entry.IpAddress[3]),
-		fmt.Sprintf("%d.%d.%d.%d", entry.SubMask[0], entry.SubMask[1], entry.SubMask[2], entry.SubMask[3]),
+		entry.IpAddress,
+		entry.SubMask,
 		nextHop,
-		fmt.Sprintf("%d.%d.%d.%d", entry.Interface[0], entry.Interface[1], entry.Interface[2], entry.Interface[3]),
+		entry.Interface,
 		entry.Metric)
 }
 
 func PrintRoutingTable(routingTable []RouterEntry) {
 	fmt.Println("Ip Address      Mask            Next Hop        Interface       Metric")
+	for i := 0; i < len(routingTable); i++ {
+		for j := i + 1; j < len(routingTable); j++ {
+			if routingTable[i].Metric > routingTable[j].Metric || (routingTable[i].Metric == routingTable[j].Metric && routingTable[i].IpAddress > routingTable[j].IpAddress) {
+				routingTable[i], routingTable[j] = routingTable[j], routingTable[i]
+			}
+		}
+	}
+
 	for _, entry := range routingTable {
 		fmt.Println(entry.String())
 	}
@@ -80,7 +88,26 @@ func MarshalRipPacket(packet RipPacket) ([]byte, error) {
 	}
 
 	for _, entry := range packet.RoutingTable {
-		if err := binary.Write(buf, binary.BigEndian, entry); err != nil {
+		ipBytes := parseIpToBytes(entry.IpAddress)
+		if err := binary.Write(buf, binary.BigEndian, ipBytes); err != nil {
+			return nil, err
+		}
+		subMaskBytes := parseIpToBytes(entry.SubMask)
+		if err := binary.Write(buf, binary.BigEndian, subMaskBytes); err != nil {
+			return nil, err
+		}
+		nextHopBytes := parseIpToBytes(entry.NextHop)
+		if err := binary.Write(buf, binary.BigEndian, nextHopBytes); err != nil {
+			return nil, err
+		}
+		interfaceBytes := parseIpToBytes(entry.Interface)
+		if err := binary.Write(buf, binary.BigEndian, interfaceBytes); err != nil {
+			return nil, err
+		}
+		if err := binary.Write(buf, binary.BigEndian, entry.Metric); err != nil {
+			return nil, err
+		}
+		if err := binary.Write(buf, binary.BigEndian, entry.HasNextHop); err != nil {
 			return nil, err
 		}
 	}
@@ -98,14 +125,36 @@ func UnmarshalRipPacket(data []byte) (RipPacket, error) {
 	if err := binary.Read(buf, binary.BigEndian, &packet.Version); err != nil {
 		return packet, err
 	}
-
 	if err := binary.Read(buf, binary.BigEndian, &packet.Unused); err != nil {
 		return packet, err
 	}
 
 	for buf.Len() > 0 {
 		entry := RouterEntry{}
-		if err := binary.Read(buf, binary.BigEndian, &entry); err != nil {
+		var ipBytes [4]byte
+		if err := binary.Read(buf, binary.BigEndian, &ipBytes); err != nil {
+			return packet, err
+		}
+		entry.IpAddress = parseBytesToIp(ipBytes)
+		var subMaskBytes [4]byte
+		if err := binary.Read(buf, binary.BigEndian, &subMaskBytes); err != nil {
+			return packet, err
+		}
+		entry.SubMask = parseBytesToIp(subMaskBytes)
+		var nextHopBytes [4]byte
+		if err := binary.Read(buf, binary.BigEndian, &nextHopBytes); err != nil {
+			return packet, err
+		}
+		entry.NextHop = parseBytesToIp(nextHopBytes)
+		var interfaceBytes [4]byte
+		if err := binary.Read(buf, binary.BigEndian, &interfaceBytes); err != nil {
+			return packet, err
+		}
+		entry.Interface = parseBytesToIp(interfaceBytes)
+		if err := binary.Read(buf, binary.BigEndian, &entry.Metric); err != nil {
+			return packet, err
+		}
+		if err := binary.Read(buf, binary.BigEndian, &entry.HasNextHop); err != nil {
 			return packet, err
 		}
 		packet.RoutingTable = append(packet.RoutingTable, entry)

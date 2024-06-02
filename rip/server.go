@@ -41,44 +41,85 @@ func UdpServer(host string, port int, defaultRouterConfig []RouterEntry) {
 }
 
 func MergeRoutingTable(routingTable []RouterEntry, newRoutingTable []RouterEntry) []RouterEntry {
-	var addressInterface [4]byte
-	var nextHop [4]byte
-	existingRoutes := make(map[[8]byte]int)
-	for i, existingRoute := range routingTable {
-		existingRoutes[[8]byte(append(existingRoute.IpAddress[:], existingRoute.SubMask[:]...))] = i
+	outputTable := make([]RouterEntry, len(routingTable))
+	copy(outputTable, routingTable)
+
+	for _, route := range newRoutingTable {
+		route.Metric++
+		outputTable = append(outputTable, route)
 	}
-	for _, newRoute := range newRoutingTable {
-		for i, existingRoute := range routingTable {
-			if areAddressesEqual(existingRoute.IpAddress, existingRoute.SubMask, newRoute.IpAddress, newRoute.SubMask) {
-				nextHop = newRoute.Interface
-				addressInterface = existingRoute.Interface
-				if newRoute.Metric < existingRoute.Metric {
-					routingTable[i] = newRoute
+
+	ipDestMap := make(map[string][]RouterEntry)
+	for _, route := range outputTable {
+		ipDestMap[route.IpAddress] = append(ipDestMap[route.IpAddress], route)
+	}
+
+	ipTable1 := make(map[string]bool)
+	for _, route := range routingTable {
+		ipTable1[route.Interface] = true
+	}
+
+	for _, routes := range ipDestMap {
+		if len(routes) > 1 {
+
+			hasMetricOne := false
+			for _, route := range routes {
+				if route.Metric == 1 {
+					hasMetricOne = true
+					break
 				}
-				break
+			}
+			if !hasMetricOne {
+				continue
+			}
+
+			for _, route := range routes {
+				for i := range outputTable {
+					if ipTable1[route.Interface] && !ipTable1[outputTable[i].Interface] {
+						outputTable[i].Interface = route.Interface
+						outputTable[i].NextHop = ""
+						outputTable[i].HasNextHop = false
+					} else if !ipTable1[route.Interface] && !outputTable[i].HasNextHop {
+						outputTable[i].NextHop = route.Interface
+						outputTable[i].HasNextHop = true
+					}
+				}
+			}
+
+		}
+	}
+
+	for i, route := range outputTable {
+		for _, existingRoute := range routingTable {
+			if route.IpAddress == existingRoute.IpAddress {
+				outputTable[i].NextHop = existingRoute.NextHop
+				outputTable[i].HasNextHop = existingRoute.HasNextHop
 			}
 		}
 	}
-	for _, newRoute := range newRoutingTable {
-		newRoute.NextHop = nextHop
-		newRoute.Interface = addressInterface
-		newRoute.Metric++
-		newRoute.HasNextHop = true
-		if _, ok := existingRoutes[[8]byte(append(newRoute.IpAddress[:], newRoute.SubMask[:]...))]; ok {
-			continue
-		}
-		routingTable = append(routingTable, newRoute)
-	}
-	return routingTable
+
+	ipDestMap = make(map[string][]RouterEntry)
+	outputTable = removeDuplicateDestinations(outputTable)
+
+	return outputTable
 }
 
-func areAddressesEqual(address [4]byte, mask [4]byte, address2 [4]byte, mask2 [4]byte) bool {
-	addressWithMask := applyMask(address, mask)
-	address2WithMask := applyMask(address2, mask2)
-	for i := 0; i < 4; i++ {
-		if addressWithMask[i] != address2WithMask[i] {
-			return false
+func removeDuplicateDestinations(routingTable []RouterEntry) []RouterEntry {
+	ipDestMap := make(map[string]RouterEntry)
+	for _, route := range routingTable {
+		if existingRoute, ok := ipDestMap[route.IpAddress]; ok {
+			if existingRoute.Metric > route.Metric {
+				ipDestMap[route.IpAddress] = route
+			}
+		} else {
+			ipDestMap[route.IpAddress] = route
 		}
 	}
-	return true
+
+	outputTable := make([]RouterEntry, 0, len(ipDestMap))
+	for _, route := range ipDestMap {
+		outputTable = append(outputTable, route)
+	}
+
+	return outputTable
 }

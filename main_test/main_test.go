@@ -13,6 +13,7 @@ func TestServer(t *testing.T) {
 		t.Error(err)
 	}
 	rip.UdpClient("localhost", 521, dataToSend)
+	// Not a real test, just to see the output
 }
 
 func TestMarshallUnMarshall(t *testing.T) {
@@ -31,7 +32,7 @@ func TestMarshallUnMarshall(t *testing.T) {
 	}
 }
 
-func TestSendR2ToR1(t *testing.T) {
+func TestSendRoutingTableToAnotherRouter(t *testing.T) {
 	go rip.UdpServer("localhost", 521, rip.ReadConfig("../config/routeur-r1.yaml"))
 	ripPacket := rip.CreateRipPacket("../config/routeur-r2.yaml")
 	dataToSend, err := rip.MarshalRipPacket(ripPacket)
@@ -39,12 +40,26 @@ func TestSendR2ToR1(t *testing.T) {
 		t.Error(err)
 	}
 	rip.UdpClient("localhost", 521, dataToSend)
+	// Not a real test, just to see the output
+}
+
+func TestSendR2ToR1(t *testing.T) {
+	router1 := rip.ReadConfig("../config/routeur-r1.yaml")
+	router2 := rip.ReadConfig("../config/routeur-r2.yaml")
+	router1 = rip.MergeRoutingTable(router1, router2)
+	expectedTable := []rip.RouterEntry{
+		{IpAddress: "192.168.1.0", SubMask: "255.255.255.0", HasNextHop: false, Interface: "192.168.1.254", Metric: 1},
+		{IpAddress: "10.1.1.0", SubMask: "255.255.255.252", HasNextHop: false, Interface: "10.1.1.1", Metric: 1},
+		{IpAddress: "10.1.2.0", SubMask: "255.255.255.252", NextHop: "10.1.1.2", HasNextHop: true, Interface: "10.1.1.1", Metric: 2},
+		{IpAddress: "10.1.4.0", SubMask: "255.255.255.252", NextHop: "10.1.1.2", HasNextHop: true, Interface: "10.1.1.1", Metric: 2},
+		{IpAddress: "10.1.3.0", SubMask: "255.255.255.252", NextHop: "10.1.1.2", HasNextHop: true, Interface: "10.1.1.1", Metric: 2},
+	}
+	checkRoutingTable(t, router1, expectedTable)
 }
 
 func TestMergeEverything(t *testing.T) {
 	router1 := rip.ReadConfig("../config/routeur-r1.yaml")
 	router2 := rip.ReadConfig("../config/routeur-r2.yaml")
-	//router3 := rip.ReadConfig("../config/routeur-r3.yaml")
 	router4 := rip.ReadConfig("../config/routeur-r4.yaml")
 	router5 := rip.ReadConfig("../config/routeur-r5.yaml")
 	router6 := rip.ReadConfig("../config/routeur-r6.yaml")
@@ -54,5 +69,33 @@ func TestMergeEverything(t *testing.T) {
 	router2 = rip.MergeRoutingTable(router2, router5)
 	router1 = rip.MergeRoutingTable(router1, router2)
 	rip.PrintRoutingTable(router1)
-	rip.PrintRoutingTable(router2)
+}
+
+func areRoutingTableEqual(routingTable1 []rip.RouterEntry, routingTable2 []rip.RouterEntry) bool {
+	if len(routingTable1) != len(routingTable2) {
+		return false
+	}
+	for _, entry1 := range routingTable1 {
+		found := false
+		for _, entry2 := range routingTable2 {
+			if entry1.String() == entry2.String() {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
+}
+
+func checkRoutingTable(t *testing.T, routingTable []rip.RouterEntry, expectedTable []rip.RouterEntry) {
+	if !areRoutingTableEqual(routingTable, expectedTable) {
+		t.Error("Table mismatch")
+		println("Expected")
+		rip.PrintRoutingTable(expectedTable)
+		println("But got")
+		rip.PrintRoutingTable(routingTable)
+	}
 }

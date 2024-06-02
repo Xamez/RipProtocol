@@ -14,10 +14,12 @@ func CheckForError(err error) {
 	}
 }
 
-func applyMask(ip [4]byte, mask [4]byte) [4]byte {
+func parseIpToBytes(ip string) [4]byte {
 	var result [4]byte
-	for i := 0; i < 4; i++ {
-		result[i] = ip[i] & mask[i]
-	}
+	fmt.Sscanf(ip, "%d.%d.%d.%d", &result[0], &result[1], &result[2], &result[3])
 	return result
+}
+
+func parseBytesToIp(ip [4]byte) string {
+	return fmt.Sprintf("%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3])
 }
