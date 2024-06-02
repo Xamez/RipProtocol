@@ -68,7 +68,19 @@ func TestMergeEverything(t *testing.T) {
 	router2 = rip.MergeRoutingTable(router2, router4)
 	router2 = rip.MergeRoutingTable(router2, router5)
 	router1 = rip.MergeRoutingTable(router1, router2)
-	rip.PrintRoutingTable(router1)
+	expectedTable := []rip.RouterEntry{
+		{IpAddress: "10.1.1.0", SubMask: "255.255.255.252", HasNextHop: false, Interface: "10.1.1.1", Metric: 1},
+		{IpAddress: "192.168.1.0", SubMask: "255.255.255.0", HasNextHop: false, Interface: "192.168.1.254", Metric: 1},
+		{IpAddress: "10.1.2.0", SubMask: "255.255.255.252", NextHop: "10.1.1.2", HasNextHop: true, Interface: "10.1.1.1", Metric: 2},
+		{IpAddress: "10.1.3.0", SubMask: "255.255.255.252", NextHop: "10.1.1.2", HasNextHop: true, Interface: "10.1.1.1", Metric: 2},
+		{IpAddress: "10.1.4.0", SubMask: "255.255.255.252", NextHop: "10.1.1.2", HasNextHop: true, Interface: "10.1.1.1", Metric: 2},
+		{IpAddress: "10.1.5.0", SubMask: "255.255.255.252", NextHop: "10.1.1.2", HasNextHop: true, Interface: "10.1.1.1", Metric: 3},
+		{IpAddress: "10.1.6.0", SubMask: "255.255.255.252", NextHop: "10.1.1.2", HasNextHop: true, Interface: "10.1.1.1", Metric: 3},
+		{IpAddress: "10.1.7.0", SubMask: "255.255.255.252", NextHop: "10.1.1.2", HasNextHop: true, Interface: "10.1.1.1", Metric: 3},
+		{IpAddress: "172.16.180.0", SubMask: "255.255.255.0", NextHop: "10.1.1.2", HasNextHop: true, Interface: "10.1.1.1", Metric: 4},
+	}
+	checkRoutingTable(t, router1, expectedTable)
+
 }
 
 func areRoutingTableEqual(routingTable1 []rip.RouterEntry, routingTable2 []rip.RouterEntry) bool {
