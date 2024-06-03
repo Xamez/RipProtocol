@@ -43,7 +43,7 @@ func TestSendRoutingTableToAnotherRouter(t *testing.T) {
 	// Not a real test, just to see the output
 }
 
-func TestSendR2ToR1(t *testing.T) {
+func TestSend_R2ToR1_OutputR1(t *testing.T) {
 	router1 := rip.ReadConfig("../config/routeur-r1.yaml")
 	router2 := rip.ReadConfig("../config/routeur-r2.yaml")
 	router1 = rip.MergeRoutingTable(router1, router2)
@@ -57,7 +57,28 @@ func TestSendR2ToR1(t *testing.T) {
 	checkRoutingTable(t, router1, expectedTable)
 }
 
-func TestMergeEverything(t *testing.T) {
+func TestSend_R3ToR5_R3ToR5_R5ToR2_OutputR2(t *testing.T) {
+	router2 := rip.ReadConfig("../config/routeur-r2.yaml")
+	router3 := rip.ReadConfig("../config/routeur-r3.yaml")
+	router5 := rip.ReadConfig("../config/routeur-r5.yaml")
+	router6 := rip.ReadConfig("../config/routeur-r6.yaml")
+	router5 = rip.MergeRoutingTable(router5, router6)
+	router5 = rip.MergeRoutingTable(router5, router3)
+	router2 = rip.MergeRoutingTable(router2, router5)
+	expectedTable := []rip.RouterEntry{
+		{IpAddress: "10.1.1.0", SubMask: "255.255.255.252", HasNextHop: false, Interface: "10.1.1.2", Metric: 1},
+		{IpAddress: "10.1.2.0", SubMask: "255.255.255.252", HasNextHop: false, Interface: "10.1.2.1", Metric: 1},
+		{IpAddress: "10.1.3.0", SubMask: "255.255.255.252", HasNextHop: false, Interface: "10.1.3.1", Metric: 1},
+		{IpAddress: "10.1.4.0", SubMask: "255.255.255.252", HasNextHop: false, Interface: "10.1.4.1", Metric: 1},
+		{IpAddress: "10.1.5.0", SubMask: "255.255.255.252", NextHop: "10.1.4.2", HasNextHop: true, Interface: "10.1.4.1", Metric: 2},
+		{IpAddress: "10.1.6.0", SubMask: "255.255.255.252", NextHop: "10.1.4.2", HasNextHop: true, Interface: "10.1.4.1", Metric: 2},
+		{IpAddress: "10.1.7.0", SubMask: "255.255.255.252", NextHop: "10.1.4.2", HasNextHop: true, Interface: "10.1.4.1", Metric: 2},
+		{IpAddress: "172.16.180.0", SubMask: "255.255.255.0", NextHop: "10.1.4.2", HasNextHop: true, Interface: "10.1.4.1", Metric: 3},
+	}
+	checkRoutingTable(t, router2, expectedTable)
+}
+
+func TestMergeEverything_OutputR2(t *testing.T) {
 	router1 := rip.ReadConfig("../config/routeur-r1.yaml")
 	router2 := rip.ReadConfig("../config/routeur-r2.yaml")
 	router4 := rip.ReadConfig("../config/routeur-r4.yaml")

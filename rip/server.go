@@ -59,20 +59,36 @@ func MergeRoutingTable(routingTable []RouterEntry, newRoutingTable []RouterEntry
 		ipTable1[route.Interface] = true
 	}
 
-	for _, routes := range ipDestMap {
-		if len(routes) > 1 {
+	ipDestMapFilter := make(map[string][]RouterEntry)
 
-			hasMetricOne := false
+	for ipDest, routes := range ipDestMap {
+		if len(routes) >= 2 {
+			ipDestMapFilter[ipDest] = routes
+		}
+	}
+
+	if len(ipDestMapFilter) >= 2 {
+		minSumMetric := -1
+		var minSumMetricIP string
+		for ipDest, routes := range ipDestMapFilter {
+			sumMetric := 0
 			for _, route := range routes {
-				if route.Metric == 1 {
-					hasMetricOne = true
-					break
-				}
+				sumMetric += int(route.Metric)
 			}
-			if !hasMetricOne {
-				continue
+			if minSumMetric == -1 || sumMetric < minSumMetric {
+				minSumMetric = sumMetric
+				minSumMetricIP = ipDest
 			}
+		}
 
+		filteredIPDestMapFilter := make(map[string][]RouterEntry)
+
+		filteredIPDestMapFilter[minSumMetricIP] = ipDestMapFilter[minSumMetricIP]
+		ipDestMapFilter = filteredIPDestMapFilter
+	}
+
+	for _, routes := range ipDestMapFilter {
+		if len(routes) > 1 {
 			for _, route := range routes {
 				for i := range outputTable {
 					if ipTable1[route.Interface] && !ipTable1[outputTable[i].Interface] {
@@ -85,7 +101,6 @@ func MergeRoutingTable(routingTable []RouterEntry, newRoutingTable []RouterEntry
 					}
 				}
 			}
-
 		}
 	}
 
